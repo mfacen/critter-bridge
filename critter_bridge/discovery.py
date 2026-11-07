@@ -14,8 +14,8 @@ The listener parses these and hands identity to the store:
   * an unknown MAC is auto-registered when the "auto_add" setting is on,
     otherwise it shows up in the UI "Discovered" list to be adopted.
 
-The architecture stays pull-only: beacons carry identity, never state, so
-panel values always come from /api/dashboard.
+Beacons carry identity, never state, so panel values always come from
+`/api/dashboard`. Telegram triggers are the one board-originated push path.
 """
 
 import logging
