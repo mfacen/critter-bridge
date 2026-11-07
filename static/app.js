@@ -56,15 +56,13 @@ function render() {
   if (!STATE) return;
   $("ver").textContent = "v" + STATE.version;
 
-  // don't clobber fields the user is typing into right now
-  if (!document.forms["settings-form"].matches(":focus-within")) {
-    const s = STATE.settings || {};
-    $("set-interval").value = s.poll_interval || 15;
-    $("set-beacon").value = s.udp_beacon_port ?? 1234;
-    $("set-auto").checked = s.auto_add !== false;
-    $("set-token").value = s.telegram_token || "";
-    $("set-chat").value = s.telegram_chat_id || "";
-  }
+  // don't clobber fields the user is editing right now
+  const s = STATE.settings || {};
+  if (document.activeElement !== $("set-interval")) $("set-interval").value = s.poll_interval || 15;
+  if (document.activeElement !== $("set-beacon")) $("set-beacon").value = s.udp_beacon_port ?? 1234;
+  if (document.activeElement !== $("set-auto")) $("set-auto").checked = s.auto_add !== false;
+  if (document.activeElement !== $("set-token")) $("set-token").value = s.telegram_token || "";
+  if (document.activeElement !== $("set-chat")) $("set-chat").value = s.telegram_chat_id || "";
   if (!document.querySelector("#board-list :focus")) renderBoards();
   renderDiscovered();
   renderRuleFormSelects();
