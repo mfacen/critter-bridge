@@ -331,7 +331,13 @@ function renderRules() {
     d.addEventListener("click", async (e) => {
       const btn = e.target.closest("button[data-act=rdel]");
       if (btn) {
-        try { await api("DELETE", "/api/rules/" + r.id); toast("Rule deleted"); load(); } catch (err) { toast(err.message, false); }
+        if (!confirm("Delete this rule?")) return;
+        try {
+          await api("DELETE", "/api/rules/" + r.id);
+          toast("Rule deleted");
+          d.remove(); // instant visual removal
+          load();     // refresh full state
+        } catch (err) { toast(err.message, false); }
         return;
       }
       if (e.target.classList && e.target.classList.contains("ren")) {
