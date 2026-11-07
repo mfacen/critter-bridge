@@ -109,7 +109,7 @@ class Store:
     def update_settings(self, patch):
         with self._lock:
             s = self._data["settings"]
-            for key in ("listen_host", "telegram_token"):
+            for key in ("listen_host", "telegram_token", "telegram_chat_id"):
                 if key in patch and patch[key] is not None:
                     s[key] = str(patch[key])
             iv = _clamp_interval(patch.get("poll_interval"), 5)

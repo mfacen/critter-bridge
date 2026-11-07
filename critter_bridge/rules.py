@@ -69,6 +69,12 @@ class RuleEngine:
         """
         device = board.get("name") or device_name or board["id"]
         panel_names = {m["id"]: (m.get("name") or m["id"]) for m in (panel_meta or [])}
+        # Telegram panels are one-shot notification triggers handled by the
+        # board's push transport. Ignore them here so a bridge rule cannot
+        # double-send the same alert.
+        telegram_panels = {
+            m["id"] for m in (panel_meta or []) if m.get("type") == "telegram"
+        }
         results = []
         now = time.monotonic()
         for rule in self.store.rules():
@@ -77,7 +83,7 @@ class RuleEngine:
             if rule.get("board_id") and rule["board_id"] != board["id"]:
                 continue
             pid = rule.get("panel_id")
-            if pid not in values:
+            if pid not in values or pid in telegram_panels:
                 continue
             value = values[pid]
             try:

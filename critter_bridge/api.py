@@ -1,6 +1,7 @@
 """Local web API + static UI."""
 
 import logging
+import queue
 
 from flask import Flask, jsonify, request, send_from_directory
 
@@ -10,7 +11,7 @@ from . import telegram
 log = logging.getLogger(__name__)
 
 
-def create_app(store, poller, events, discovery=None):
+def create_app(store, poller, events, discovery=None, notifier=None):
     app = Flask("critter-bridge")
 
     # ---- static UI ----
@@ -134,6 +135,40 @@ def create_app(store, poller, events, discovery=None):
     @app.post("/api/settings")
     def update_settings():
         return jsonify({"settings": store.update_settings(request.get_json(silent=True) or {})})
+
+    # ---- board-originated notifications ----
+
+    @app.post("/api/telegram/send")
+    def telegram_send():
+        data = request.get_json(silent=True) or {}
+        text = str(data.get("text") or data.get("message") or "").strip()
+        if not text:
+            return err("text required")
+
+        settings = store.settings()
+        if not str(settings.get("telegram_token") or "").strip():
+            return err("telegram token not configured")
+        chat_id = str(data.get("chat_id") or "").strip()
+        if not (chat_id or str(settings.get("telegram_chat_id") or "").strip()):
+            return err("telegram chat id not configured")
+
+        who = str(data.get("device") or data.get("mac") or request.remote_addr or "").strip()
+        panel = str(data.get("panel") or "").strip()
+
+        if notifier is None:
+            ok, detail = telegram.send(
+                settings.get("telegram_token", ""),
+                chat_id or settings.get("telegram_chat_id", ""),
+                text,
+            )
+            events.add("telegram" if ok else "error", "push %s/%s: %s" % (who or "board", panel or "?", detail))
+            return jsonify({"ok": bool(ok), "detail": detail}), (200 if ok else 502)
+
+        try:
+            notifier.enqueue(text, chat_id=chat_id, who=who, panel=panel)
+        except queue.Full:
+            return err("notifier queue full", 503)
+        return jsonify({"ok": True, "queued": True}), 202
 
     # ---- diagnostics ----
 

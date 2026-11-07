@@ -63,6 +63,7 @@ function render() {
     $("set-beacon").value = s.udp_beacon_port ?? 1234;
     $("set-auto").checked = s.auto_add !== false;
     $("set-token").value = s.telegram_token || "";
+    $("set-chat").value = s.telegram_chat_id || "";
   }
   if (!document.querySelector("#board-list :focus")) renderBoards();
   renderDiscovered();
@@ -384,6 +385,7 @@ $("settings-form").addEventListener("submit", async (e) => {
       udp_beacon_port: Number($("set-beacon").value || 0),
       auto_add: $("set-auto").checked,
       telegram_token: $("set-token").value,
+      telegram_chat_id: $("set-chat").value,
     });
     toast("Settings saved");
     load();

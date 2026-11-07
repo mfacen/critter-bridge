@@ -15,6 +15,7 @@ DEFAULT_SETTINGS = {
     "listen_host": "0.0.0.0",
     "listen_port": 8787,
     "telegram_token": "",     # Telegram bot token; chars sent from here, never from a board
+    "telegram_chat_id": "",   # default chat for board-originated pushes and the test button
 }
 
 MIN_POLL_INTERVAL = 5       # floor for any poll interval, global or per board
