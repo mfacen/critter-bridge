@@ -77,7 +77,7 @@ Responses:
 ## Auto-discovery
 
 critterOS boards already broadcast a UDP beacon every `udp_beacon_secs`
-(default 10 s) on `udp_port` (default 1234):
+(default 10 s) on `udp_port` (default 8421):
 
 ```
 ID: firefly

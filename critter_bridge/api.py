@@ -28,6 +28,14 @@ def create_app(store, poller, events, discovery=None, notifier=None):
     def style():
         return send_from_directory(config.STATIC_DIR, "style.css")
 
+    @app.get("/nadias_logo.jpeg")
+    def logo():
+        return send_from_directory(config.STATIC_DIR, "nadias_logo.jpeg")
+
+    @app.get("/favicon.ico")
+    def favicon():
+        return send_from_directory(config.STATIC_DIR, "favicon.ico")
+
     def err(msg, code=400):
         return jsonify({"error": msg}), code
 

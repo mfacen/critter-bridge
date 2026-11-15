@@ -59,7 +59,7 @@ function render() {
   // don't clobber fields the user is editing right now
   const s = STATE.settings || {};
   if (document.activeElement !== $("set-interval")) $("set-interval").value = s.poll_interval || 15;
-  if (document.activeElement !== $("set-beacon")) $("set-beacon").value = s.udp_beacon_port ?? 1234;
+  if (document.activeElement !== $("set-beacon")) $("set-beacon").value = s.udp_beacon_port ?? 8421;
   if (document.activeElement !== $("set-auto")) $("set-auto").checked = s.auto_add !== false;
   if (document.activeElement !== $("set-token")) $("set-token").value = s.telegram_token || "";
   if (document.activeElement !== $("set-chat")) $("set-chat").value = s.telegram_chat_id || "";

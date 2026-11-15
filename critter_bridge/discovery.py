@@ -1,7 +1,7 @@
 """UDP beacon listener — auto-discovery of critterOS boards.
 
 Boards broadcast a small beacon every udp_beacon_secs (default 10 s) on
-udp_port (default 1234):
+udp_port (default 8421):
 
     ID: <device_name>
     IP: http://<board-ip>
@@ -75,9 +75,9 @@ class Discovery:
         bound_port = None
         while not self._stop.is_set():
             try:
-                port = int(self.store.settings().get("udp_beacon_port", 1234) or 0)
+                port = int(self.store.settings().get("udp_beacon_port", 8421) or 0)
             except (TypeError, ValueError):
-                port = 1234
+                port = 8421
 
             # settings changed or discovery disabled: rebind / close
             if port != bound_port and sock is not None:

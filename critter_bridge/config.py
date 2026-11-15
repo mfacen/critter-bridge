@@ -11,7 +11,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 DEFAULT_SETTINGS = {
     "poll_interval": 15,      # seconds between dashboard polls (per board unless overridden)
     "auto_add": True,         # register boards as soon as their beacon is heard
-    "udp_beacon_port": 1234,  # listen for critterOS beacons (udp_port on the boards); 0 = off
+    "udp_beacon_port": 8421,  # listen for critterOS beacons (udp_port on the boards); 0 = off
     "listen_host": "0.0.0.0",
     "listen_port": 8787,
     "telegram_token": "",     # Telegram bot token; chars sent from here, never from a board
