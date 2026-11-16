@@ -30,7 +30,8 @@ body {
 
 header {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
   padding: .8rem 1.2rem;
   border-bottom: 3px solid var(--accent-color);
   border-radius: 8px;
@@ -47,14 +48,23 @@ header {
   height: auto;
 }
 
+.title-wrap {
+  flex: 1;
+  text-align: center;
+}
+
 h1 {
   font-size: 1.5em;
   color: var(--accent-color);
   border: solid var(--accent-color);
   border-radius: 8px;
   padding: 7px;
-  margin: 0 auto;
+  margin: 0;
   display: inline-block;
+}
+
+.subtitle {
+  margin-left: auto;
 }
 
 h2 {
