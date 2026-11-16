@@ -46,7 +46,7 @@ h1 {
   border: solid var(--accent-color);
   border-radius: 8px;
   padding: 7px;
-  margin: 0 auto;
+  margin: 0;
 }
 
 h2 {
@@ -85,7 +85,7 @@ input::placeholder { color: var(--mut); }
 button { cursor: pointer; background: var(--button-color); }
 button:hover { background: var(--button-color-hover); border-color: var(--button-color-hover); }
 .grow { flex: 1 1 10rem; }
-.spacer { flex: 1 0 auto; }
+.spacer { flex: 0 0 auto; }
 
 label { color: var(--main-text-color); display: inline-flex; gap: .4rem; align-items: center; }
 
