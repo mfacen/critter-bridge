@@ -77,6 +77,7 @@ const BACKENDS = [
   { id: "thingspeak", label: "ThingSpeak" },
   { id: "adafruit", label: "Adafruit IO" },
   { id: "influx", label: "InfluxDB Cloud" },
+  { id: "layerbase", label: "Layerbase (PostgreSQL)" },
 ];
 
 function panelOptions(panels) {
@@ -182,6 +183,21 @@ function renderBoards() {
           <input class="i-meas" value="${esc(cfg.measurement || "")}" placeholder="measurement (optional)" style="max-width:12rem">
           <span class="mut">all panels batched: one write per poll, tagged device/panel</span>
         </div>
+      </div>
+      <div class="cfg cfg-layerbase">
+        <div class="row">
+          <input class="lb-host" value="${esc(cfg.host || "")}" placeholder="host (e.g. *.sage.cloud.layerbase.dev)" style="min-width:19rem">
+          <input class="lb-port" value="${esc(cfg.port || "5432")}" placeholder="port" style="max-width:6rem">
+          <input class="lb-db" value="${esc(cfg.dbname || "")}" placeholder="database" style="max-width:12rem">
+        </div>
+        <div class="row">
+          <input class="lb-user" value="${esc(cfg.user || "")}" placeholder="username" style="max-width:12rem">
+          <input class="lb-pass" type="password" value="${esc(cfg.password || "")}" placeholder="password" style="min-width:14rem">
+          <input class="lb-table" value="${esc(cfg.table || "panel_values")}" placeholder="table (default panel_values)" style="max-width:12rem">
+        </div>
+        <div class="row">
+          <span class="mut">PostgreSQL/Layerbase · SSL required · all numeric panels batched per poll; table auto-created (device, panel, value, ts)</span>
+        </div>
       </div>`;
     card.querySelector(".bb").addEventListener("change", (e) => showCfg(card, e.target.value));
     showCfg(card, backend);
@@ -191,9 +207,9 @@ function renderBoards() {
 }
 
 function showCfg(card, backend) {
-  for (const b of ["thingspeak", "adafruit", "influx"]) {
+  for (const b of ["thingspeak", "adafruit", "influx", "layerbase"]) {
     const el = card.querySelector(".cfg-" + b);
-    el.classList.toggle("on", b === backend);
+    if (el) el.classList.toggle("on", b === backend);
   }
 }
 
@@ -218,6 +234,13 @@ async function onBoardAction(e) {
         cfg.bucket = card.querySelector(".i-bk").value;
         cfg.token = card.querySelector(".i-token").value;
         cfg.measurement = card.querySelector(".i-meas").value;
+      } else if (backend === "layerbase") {
+        cfg.host = card.querySelector(".lb-host").value;
+        cfg.port = card.querySelector(".lb-port").value || "5432";
+        cfg.user = card.querySelector(".lb-user").value;
+        cfg.password = card.querySelector(".lb-pass").value;
+        cfg.dbname = card.querySelector(".lb-db").value;
+        cfg.table = card.querySelector(".lb-table").value || "panel_values";
       }
       await api("POST", "/api/boards/" + id, { backend, backend_cfg: cfg });
       toast(backend ? "Board saved (" + backend + ")" : "Board saved (no cloud backend)");

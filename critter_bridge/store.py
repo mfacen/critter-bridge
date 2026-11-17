@@ -6,11 +6,12 @@ import uuid
 
 log = logging.getLogger(__name__)
 
-VALID_BACKENDS = ("thingspeak", "adafruit", "influx")
+VALID_BACKENDS = ("thingspeak", "adafruit", "influx", "layerbase")
 _BACKEND_STRKEYS = {
     "thingspeak": ("write_key",),
     "adafruit": ("username", "key"),
     "influx": ("url", "org", "bucket", "token", "measurement"),
+    "layerbase": ("host", "port", "user", "password", "dbname", "table"),
 }
 _BACKEND_MAPKEY = {
     "thingspeak": "fields",

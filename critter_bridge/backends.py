@@ -13,6 +13,8 @@ board config); every credential lives on the bridge. All are free tiers:
   influx     — one line-protocol write per poll with all panels batched;
                points are tagged device/panel, bucketed in your own cloud
                bucket. No per-panel mapping needed.
+  layerbase  — PostgreSQL-compatible (Layerbase) database; all numeric panel
+               values are inserted into a table (auto-created) per poll.
 """
 
 import logging
@@ -130,7 +132,89 @@ class Influx:
         return False, "HTTP %s: %s" % (resp.status_code, (resp.text or "")[:160])
 
 
-REGISTRY = {cls.name: cls() for cls in (ThingSpeak, Adafruit, Influx)}
+class Layerbase:
+    name = "layerbase"
+
+    @staticmethod
+    def _safe_table(table):
+        table = (table or "").strip() or "panel_values"
+        out = "".join(c if (c.isalnum() or c == "_") else "_" for c in table)
+        return out or "panel_values"
+
+    def send(self, board, values):
+        try:
+            import psycopg2
+        except Exception as e:
+            return False, "psycopg2 not installed: %s" % e
+
+        cfg = board.get("backend_cfg") or {}
+        host = (cfg.get("host") or "").strip()
+        port = str(cfg.get("port") or "5432").strip() or "5432"
+        user = (cfg.get("user") or "").strip()
+        password = (cfg.get("password") or "").strip()
+        dbname = (cfg.get("dbname") or "").strip()
+        table = self._safe_table(cfg.get("table"))
+        if not (host and user and dbname and password):
+            return None, "host / user / password / dbname missing"
+
+        device = str(board.get("name") or board.get("id") or "board")
+        rows = []
+        for pid, v in values.items():
+            try:
+                rows.append((device, str(pid), float(v)))
+            except (TypeError, ValueError):
+                continue
+        if not rows:
+            return None, "no numeric values this poll"
+
+        conn = None
+        cur = None
+        try:
+            conn = psycopg2.connect(
+                host=host,
+                port=int(port),
+                user=user,
+                password=password,
+                dbname=dbname,
+                sslmode="require",
+                connect_timeout=8,
+            )
+            cur = conn.cursor()
+            cur.execute(
+                "CREATE TABLE IF NOT EXISTS %s ("
+                "device TEXT NOT NULL,"
+                "panel TEXT NOT NULL,"
+                "value DOUBLE PRECISION NOT NULL,"
+                "ts TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+                ")" % table
+            )
+            cur.executemany(
+                "INSERT INTO %s (device, panel, value) VALUES (%%s, %%s, %%s)" % table,
+                rows,
+            )
+            conn.commit()
+            return True, "%d point(s)" % len(rows)
+        except Exception as e:
+            if conn is not None:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            return False, "request failed: %s" % e
+        finally:
+            if cur is not None:
+                try:
+                    cur.close()
+                except Exception:
+                    pass
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+
+REGISTRY = {cls.name: cls() for cls in (ThingSpeak, Adafruit, Influx, Layerbase)}
 
 
 def forward(board, values):

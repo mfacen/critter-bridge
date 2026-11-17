@@ -8,11 +8,11 @@ board-originated Telegram pushes from newer firmware.
 **Architecture: pull + optional board push.** The bridge polls each board's
 existing `/api/dashboard` endpoint on an interval and:
 
-- forwards panel values to **ThingSpeak** (first backend; Adafruit IO / InfluxDB Cloud planned),
+- forwards panel values to cloud backends (**ThingSpeak**, **Adafruit IO**, **InfluxDB v2/Cloud**, **Layerbase/PostgreSQL**),
 - evaluates panel-state **rules** and sends **Telegram** messages on threshold crossings,
 - accepts `POST /api/telegram/send` pushes from the board itself and delivers
   them from a background worker,
-- exposes a small local web UI for board registry, ThingSpeak mapping, rules, settings and an event log.
+- exposes a small local web UI for board registry, backend mapping/configuration, rules, settings and an event log.
 
 Older boards work with no firmware changes: the bridge is still a pure companion
 layer. Newer firmware can also push a Telegram trigger directly, using the
@@ -44,7 +44,7 @@ running (changes are picked up on the next poll cycle).
 | Piece | What it does |
 |---|---|
 | **Boards** | Registered by IP (or `host`), or discovered automatically from the boards' UDP beacon (see below). Status shows last poll time / last error. A board can set its own poll interval (otherwise the global one is used). The beacon keeps the stored IP fresh, so DHCP address changes self-heal. |
-| **ThingSpeak** | Per board: a write API key plus a panel → field (1–8) mapping. Default model is *one board = one channel*, so multiple boards never contend for ThingSpeak's free-tier ~15 s update cadence. |
+| **Cloud backends** | Selectable per board: **ThingSpeak** (write API key + panel → field 1–8 mapping), **Adafruit IO** (username + AIO key + panel → feed mapping), **InfluxDB** (URL, org, bucket, token, optional measurement; all numeric panel values batched per poll as `measurement,device=<board>,panel=<panel> value=<n>`), or **Layerbase/PostgreSQL** (host, port, user, password, dbname, optional table; all numeric panel values inserted per poll into a table auto-created as `panel_values(device, panel, value, ts)` by default, SSL required). |
 | **Rules** | A rule ties a panel to an operator (`< <= > >= == !=`) and a threshold; when true, a message is sent to a Telegram chat. Messages support `{device}`, `{panel}`, `{value}` placeholders (temperature is strung through the value rendering). Hysteresis and a per-rule cooldown prevent flappy spam. Rules skip panels of type `telegram`; the board sends those itself. |
 | **Telegram** | Set a bot token and a default chat id in Settings. The test button and board-originated `/api/telegram/send` pushes use the default chat unless the request supplies `chat_id`. |
 | **Events** | Rolling log (last 200) of polls, ThingSpeak results, Telegram deliveries and errors — visible in the UI and at `GET /api/events`-style `/api/status`. |
@@ -110,14 +110,20 @@ auto-name disambiguates, but distinct names are still tidier.
   its display awake. That is accepted behavior for v1.
 - **Rule counters live in memory.** A bridge restart resets re-arm/cooldown
   state; this is fine for hobbyist use.
-- **Telegram & ThingSpeak credentials live only here** in bridge mode, never on
+- **Telegram & cloud backend credentials live only here** in bridge mode, never on
   a board. ESP32 direct-cloud mode is the exception: that board stores its own
   credentials.
 
+## Backend status
+
+- **ThingSpeak**: tested and working.
+- **InfluxDB (v2 / Cloud write API)**: tested and working.
+- **Adafruit IO**: implemented (not yet verified in this environment).
+- **Layerbase (PostgreSQL)**: implemented (hosted PostgreSQL/Layerbase via `psycopg2`; per-board credentials, auto-created table). Requires `pip install psycopg2-binary` on the bridge host.
+
 ## Roadmap
 
-- **Next:** more backends behind the same pull model (Adafruit IO, InfluxDB Cloud),
-  value gathering per cycle, config file UX polish.
+- **Next:** additional backend validation/polish (Adafruit IO, Layerbase), value gathering per cycle, config file UX polish.
 - **Packaging:** single-file executable (PyInstaller) and/or Docker image; a two-line
   systemd unit for Pi users.
 - **Later:** more backends, richer rule actions, and config file UX polish.
