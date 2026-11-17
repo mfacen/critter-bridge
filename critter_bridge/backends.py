@@ -178,7 +178,6 @@ class Layerbase:
                 dbname=dbname,
                 sslmode="require",
                 connect_timeout=8,
-                gssencmode="disable",
                 keepalives=1,
                 keepalives_idle=30,
                 keepalives_interval=10,
