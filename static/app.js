@@ -87,6 +87,26 @@ function panelOptions(panels) {
 
 function renderBoards() {
   const list = $("board-list");
+  const editSels = [".bname", ".bhost", ".bint", ".bb", ".tskey", ".ts-panel", ".ts-field", ".aio-user", ".aio-key", ".aio-panel", ".aio-feed", ".i-url", ".i-org", ".i-bk", ".i-token", ".i-meas", ".lb-host", ".lb-port", ".lb-db", ".lb-user", ".lb-pass", ".lb-table"];
+  // Preserve unsaved edits across periodic refreshes (e.g. while pasting credentials).
+  const drafts = {};
+  for (const old of list.querySelectorAll(".card[data-id]")) {
+    const d = {};
+    let changed = false;
+    for (const sel of editSels) {
+      const el = old.querySelector(sel);
+      if (!el) continue;
+      // Compare against the value the element had when rendered; if different, keep it.
+      const rendered = (el.defaultValue !== undefined && el.tagName === "INPUT" && el.type !== "checkbox") ? el.defaultValue : (el.dataset.rendered || "");
+      if (el.tagName === "SELECT") {
+        if (el.value !== (el.dataset.rendered || el.options[0]?.value || "")) { d[sel] = el.value; changed = true; }
+      } else if (el.value !== rendered) {
+        d[sel] = el.value; changed = true;
+      }
+    }
+    if (changed) drafts[old.dataset.id] = d;
+  }
+
   list.innerHTML = "";
   for (const b of STATE.boards) {
     const st = b.status || {};
@@ -200,7 +220,19 @@ function renderBoards() {
         </div>
       </div>`;
     card.querySelector(".bb").addEventListener("change", (e) => showCfg(card, e.target.value));
-    showCfg(card, backend);
+    // Mark rendered values so unsaved edits can be detected on next refresh.
+    for (const sel of editSels) {
+      const el = card.querySelector(sel);
+      if (el) el.dataset.rendered = el.value;
+    }
+    const activeBackend = (drafts[b.id] && drafts[b.id][".bb"] !== undefined) ? drafts[b.id][".bb"] : backend;
+    if (drafts[b.id]) {
+      for (const [sel, val] of Object.entries(drafts[b.id])) {
+        const el = card.querySelector(sel);
+        if (el) el.value = val;
+      }
+    }
+    showCfg(card, activeBackend);
     card.addEventListener("click", onBoardAction);
     list.appendChild(card);
   }
