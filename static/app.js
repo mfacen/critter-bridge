@@ -87,7 +87,7 @@ function panelOptions(panels) {
 
 function renderBoards() {
   const list = $("board-list");
-  const editSels = [".bname", ".bhost", ".bint", ".bb", ".tskey", ".ts-panel", ".ts-field", ".aio-user", ".aio-key", ".aio-panel", ".aio-feed", ".i-url", ".i-org", ".i-bk", ".i-token", ".i-meas", ".lb-host", ".lb-port", ".lb-db", ".lb-user", ".lb-pass", ".lb-table"];
+  const editSels = [".bname", ".bhost", ".bint", ".bb", ".tskey", ".ts-panel", ".ts-field", ".aio-user", ".aio-key", ".aio-panel", ".aio-feed", ".i-url", ".i-org", ".i-bk", ".i-token", ".i-meas", ".lb-host", ".lb-port", ".lb-db", ".lb-user", ".lb-pass", ".lb-table", ".lb-api-url", ".lb-api-key"];
   // Preserve unsaved edits across periodic refreshes (e.g. while pasting credentials).
   const drafts = {};
   for (const old of list.querySelectorAll(".card[data-id]")) {
@@ -273,6 +273,8 @@ async function onBoardAction(e) {
         cfg.token = card.querySelector(".i-token").value;
         cfg.measurement = card.querySelector(".i-meas").value;
       } else if (backend === "layerbase") {
+        cfg.api_url = card.querySelector(".lb-api-url").value;
+        cfg.api_key = card.querySelector(".lb-api-key").value;
         cfg.host = card.querySelector(".lb-host").value;
         cfg.port = card.querySelector(".lb-port").value || "5432";
         cfg.user = card.querySelector(".lb-user").value;
