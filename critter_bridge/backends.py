@@ -188,8 +188,8 @@ class Layerbase:
                 "CREATE TABLE IF NOT EXISTS %s ("
                 "device TEXT NOT NULL,"
                 "panel TEXT NOT NULL,"
-                "value DOUBLE PRECISION NOT NULL,"
-                "ts TIMESTAMPTZ NOT NULL DEFAULT NOW()"
+                "value REAL NOT NULL,"
+                "ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
                 ")" % table
             )
             cur.executemany(

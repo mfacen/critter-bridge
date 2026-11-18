@@ -216,7 +216,7 @@ function renderBoards() {
           <input class="lb-table" value="${esc(cfg.table || "panel_values")}" placeholder="table (default panel_values)" style="max-width:12rem">
         </div>
         <div class="row">
-          <span class="mut">PostgreSQL/Layerbase · SSL required · all numeric panels batched per poll; table auto-created (device, panel, value, ts)</span>
+          <span class="mut">PostgreSQL/Layerbase · SSL required · all numeric panels batched per poll; table auto-created (device, panel, value, ts TEXT)</span>
         </div>
       </div>`;
     card.querySelector(".bb").addEventListener("change", (e) => showCfg(card, e.target.value));
