@@ -206,17 +206,23 @@ function renderBoards() {
       </div>
       <div class="cfg cfg-layerbase">
         <div class="row">
-          <input class="lb-host" value="${esc(cfg.host || "")}" placeholder="host (e.g. *.sage.cloud.layerbase.dev)" style="min-width:19rem">
+          <input class="lb-api-url" value="${esc(cfg.api_url || "")}" placeholder="HTTP API query URL (recommended, e.g. https://sage.cloud.layerbase.dev/v1/databases/<id>/query)" style="min-width:28rem">
+        </div>
+        <div class="row">
+          <input class="lb-api-key" type="password" value="${esc(cfg.api_key || "")}" placeholder="Bearer API key (sk_...)" style="min-width:22rem">
+          <input class="lb-table" value="${esc(cfg.table || "panel_values")}" placeholder="table (default panel_values)" style="max-width:12rem">
+        </div>
+        <div class="row">
+          <span class="mut">HTTP mode (recommended): uses Layerbase query API via HTTPS. Table auto-created (device, panel, value, ts TEXT). Direct PostgreSQL fields below are optional fallback.</span>
+        </div>
+        <div class="row">
+          <input class="lb-host" value="${esc(cfg.host || "")}" placeholder="Postgres host (fallback)" style="min-width:19rem">
           <input class="lb-port" value="${esc(cfg.port || "5432")}" placeholder="port" style="max-width:6rem">
           <input class="lb-db" value="${esc(cfg.dbname || "")}" placeholder="database" style="max-width:12rem">
         </div>
         <div class="row">
           <input class="lb-user" value="${esc(cfg.user || "")}" placeholder="username" style="max-width:12rem">
           <input class="lb-pass" type="password" value="${esc(cfg.password || "")}" placeholder="password" style="min-width:14rem">
-          <input class="lb-table" value="${esc(cfg.table || "panel_values")}" placeholder="table (default panel_values)" style="max-width:12rem">
-        </div>
-        <div class="row">
-          <span class="mut">PostgreSQL/Layerbase · SSL required · all numeric panels batched per poll; table auto-created (device, panel, value, ts TEXT)</span>
         </div>
       </div>`;
     card.querySelector(".bb").addEventListener("change", (e) => showCfg(card, e.target.value));

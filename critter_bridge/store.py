@@ -11,7 +11,7 @@ _BACKEND_STRKEYS = {
     "thingspeak": ("write_key",),
     "adafruit": ("username", "key"),
     "influx": ("url", "org", "bucket", "token", "measurement"),
-    "layerbase": ("host", "port", "user", "password", "dbname", "table"),
+    "layerbase": ("host", "port", "user", "password", "dbname", "table", "api_url", "api_key"),
 }
 _BACKEND_MAPKEY = {
     "thingspeak": "fields",

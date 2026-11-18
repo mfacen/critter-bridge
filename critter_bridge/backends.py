@@ -141,13 +141,69 @@ class Layerbase:
         out = "".join(c if (c.isalnum() or c == "_") else "_" for c in table)
         return out or "panel_values"
 
+    @staticmethod
+    def _sql_str(value):
+        # Basic SQL string literal escaping for SQLite-compatible query API.
+        return "'" + str(value).replace("'", "''") + "'"
+
+    def _send_http(self, board, values, cfg):
+        api_url = (cfg.get("api_url") or "").strip()
+        api_key = (cfg.get("api_key") or "").strip()
+        table = self._safe_table(cfg.get("table"))
+        if not api_url or not api_key:
+            return None, "api_url / api_key missing"
+
+        device = str(board.get("name") or board.get("id") or "board")
+        rows = []
+        for pid, v in values.items():
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            rows.append("(%s,%s,%s)" % (self._sql_str(device), self._sql_str(pid), repr(fv)))
+        if not rows:
+            return None, "no numeric values this poll"
+
+        headers = {
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+        }
+        create_sql = (
+            "CREATE TABLE IF NOT EXISTS %s ("
+            "device TEXT NOT NULL,"
+            "panel TEXT NOT NULL,"
+            "value REAL NOT NULL,"
+            "ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP"
+            ")" % table
+        )
+        insert_sql = "INSERT INTO %s (device,panel,value) VALUES %s" % (table, ",".join(rows))
+        try:
+            resp = requests.post(api_url, json={"query": create_sql}, headers=headers, timeout=12)
+            if not resp.ok:
+                return False, "HTTP %s: %s" % (resp.status_code, (resp.text or "")[:160])
+            resp = requests.post(api_url, json={"query": insert_sql}, headers=headers, timeout=12)
+            if not resp.ok:
+                return False, "HTTP %s: %s" % (resp.status_code, (resp.text or "")[:160])
+            data = {}
+            try:
+                data = resp.json() or {}
+            except Exception:
+                data = {}
+            count = data.get("rowCount")
+            return True, "%s point(s)" % (count if count is not None else len(rows))
+        except Exception as e:
+            return False, "request failed: %s" % e
+
     def send(self, board, values):
+        cfg = board.get("backend_cfg") or {}
+        if (cfg.get("api_key") or "").strip() or (cfg.get("api_url") or "").strip():
+            return self._send_http(board, values, cfg)
+
         try:
             import psycopg2
         except Exception as e:
             return False, "psycopg2 not installed: %s" % e
 
-        cfg = board.get("backend_cfg") or {}
         host = (cfg.get("host") or "").strip()
         port = str(cfg.get("port") or "5432").strip() or "5432"
         user = (cfg.get("user") or "").strip()
@@ -155,7 +211,7 @@ class Layerbase:
         dbname = (cfg.get("dbname") or "").strip()
         table = self._safe_table(cfg.get("table"))
         if not (host and user and dbname and password):
-            return None, "host / user / password / dbname missing"
+            return None, "host / user / password / dbname missing (or set api_url / api_key for HTTP API)"
 
         device = str(board.get("name") or board.get("id") or "board")
         rows = []
