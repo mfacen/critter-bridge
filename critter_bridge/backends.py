@@ -180,7 +180,12 @@ class Layerbase:
         try:
             resp = requests.post(api_url, json={"query": create_sql}, headers=headers, timeout=12)
             if not resp.ok:
-                return False, "HTTP %s: %s" % (resp.status_code, (resp.text or "")[:160])
+                body = (resp.text or "")
+                # Some SQLite-compatible engines may reject IF NOT EXISTS; tolerate existing table.
+                if resp.status_code == 400 and "already exists" in body.lower():
+                    pass
+                else:
+                    return False, "HTTP %s: %s" % (resp.status_code, body[:160])
             resp = requests.post(api_url, json={"query": insert_sql}, headers=headers, timeout=12)
             if not resp.ok:
                 return False, "HTTP %s: %s" % (resp.status_code, (resp.text or "")[:160])
