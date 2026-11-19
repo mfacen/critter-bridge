@@ -6,12 +6,14 @@ import uuid
 
 log = logging.getLogger(__name__)
 
-VALID_BACKENDS = ("thingspeak", "adafruit", "influx", "layerbase")
+VALID_BACKENDS = ("thingspeak", "adafruit", "influx", "layerbase", "local", "mariadb")
 _BACKEND_STRKEYS = {
     "thingspeak": ("write_key",),
     "adafruit": ("username", "key"),
     "influx": ("url", "org", "bucket", "token", "measurement"),
     "layerbase": ("host", "port", "user", "password", "dbname", "table", "api_url", "api_key"),
+    "local": (),
+    "mariadb": (),
 }
 _BACKEND_MAPKEY = {
     "thingspeak": "fields",
@@ -110,7 +112,8 @@ class Store:
     def update_settings(self, patch):
         with self._lock:
             s = self._data["settings"]
-            for key in ("listen_host", "telegram_token", "telegram_chat_id"):
+            for key in ("listen_host", "telegram_token", "telegram_chat_id", "local_db_path",
+                        "mariadb_host", "mariadb_port", "mariadb_user", "mariadb_password", "mariadb_database"):
                 if key in patch and patch[key] is not None:
                     s[key] = str(patch[key])
             iv = _clamp_interval(patch.get("poll_interval"), 5)

@@ -6,6 +6,8 @@ import queue
 from flask import Flask, jsonify, request, send_from_directory
 
 from . import config
+from . import localdb
+from . import mariadb_log
 from . import telegram
 
 log = logging.getLogger(__name__)
@@ -177,6 +179,91 @@ def create_app(store, poller, events, discovery=None, notifier=None):
         except queue.Full:
             return err("notifier queue full", 503)
         return jsonify({"ok": True, "queued": True}), 202
+
+    # ---- board logger upload (CSV push) ----
+
+    def _board_for_ip(ip):
+        ip = (ip or "").strip()
+        if not ip:
+            return None
+        for b in store.boards():
+            if (b.get("host") or "").strip() == ip:
+                return b
+        return None
+
+    def _mariadb_cfg(settings):
+        return {
+            "host": settings.get("mariadb_host", "localhost"),
+            "port": settings.get("mariadb_port", "3306"),
+            "user": settings.get("mariadb_user", ""),
+            "password": settings.get("mariadb_password", ""),
+            "database": settings.get("mariadb_database", "Hardware"),
+        }
+
+    def _mariadb_configured(settings):
+        c = _mariadb_cfg(settings)
+        return bool((c.get("user") or "").strip() and (c.get("database") or "").strip())
+
+    @app.post("/capturas/fileUpload.php")
+    def receive_logger_upload():
+        ip = request.args.get("ip", "")
+        file_name = request.args.get("fileName", "")
+        csv_text = request.get_data(cache=False, as_text=True) or ""
+        board = _board_for_ip(ip)
+        device_name = (board.get("name") if board else "") or ip or "device"
+        table_base = file_name.rsplit(".", 1)[0] if file_name else (device_name or "device")
+
+        if not csv_text.strip():
+            return "no data", 400
+
+        settings = store.settings()
+        db_path = localdb.effective_path(settings.get("local_db_path", ""), config.BASE_DIR)
+        backend = (board.get("backend") if board else "") or ""
+        maria_ok = _mariadb_configured(settings)
+        sqlite_ok = localdb.db_exists(db_path)
+
+        # Destination: explicit backend, else default local store.
+        use_mariadb = False
+        use_sqlite = False
+        if backend == "mariadb":
+            use_mariadb = maria_ok
+        elif backend == "local":
+            use_sqlite = True
+        elif backend == "":
+            if maria_ok:
+                use_mariadb = True
+            elif sqlite_ok:
+                use_sqlite = True
+        else:
+            # Cloud backend configured: CSV push forwarding not implemented;
+            # fall back to a configured local store to avoid data loss.
+            if maria_ok:
+                use_mariadb = True
+            elif sqlite_ok:
+                use_sqlite = True
+
+        if use_mariadb:
+            try:
+                rows, table = mariadb_log.store_csv(table_base, csv_text, _mariadb_cfg(settings))
+                events.add("info", "%s: stored %d row(s) in MariaDB %s (%s)" % (device_name, rows, table, file_name or "csv"))
+                return "SUCCESS...", 200
+            except Exception as e:
+                log.exception("MariaDB log store failed")
+                events.add("error", "%s: MariaDB log store failed (%s)" % (device_name, e))
+                return "store failed", 500
+
+        if use_sqlite:
+            try:
+                rows, table = localdb.store_csv(table_base, csv_text, db_path)
+                events.add("info", "%s: stored %d row(s) in SQLite %s (%s)" % (device_name, rows, table, file_name or "csv"))
+                return "ok", 200
+            except Exception as e:
+                log.exception("local log store failed")
+                events.add("error", "%s: local log store failed (%s)" % (device_name, e))
+                return "store failed", 500
+
+        events.add("info", "%s: log received but no local DB/backend configured" % device_name)
+        return "ok", 200
 
     # ---- diagnostics ----
 

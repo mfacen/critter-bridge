@@ -39,6 +39,24 @@
         <input id="set-beacon" type="number" min="0" max="65535" title="UDP beacon port the boards broadcast on (0 = discovery off)" style="max-width:6rem">
       </label>
       <label><input id="set-auto" type="checkbox"> auto-add discovered boards</label>
+      <label class="grow">Local SQLite DB path
+        <input id="set-dbpath" placeholder="(blank = critter.db next to config)" class="grow">
+      </label>
+      <label>MariaDB host
+        <input id="set-mdb-host" placeholder="localhost" style="max-width:12rem">
+      </label>
+      <label>MariaDB port
+        <input id="set-mdb-port" placeholder="3306" style="max-width:6rem">
+      </label>
+      <label>MariaDB user
+        <input id="set-mdb-user" placeholder="user" style="max-width:10rem">
+      </label>
+      <label>MariaDB password
+        <input id="set-mdb-pass" type="password" placeholder="password" style="max-width:12rem">
+      </label>
+      <label>MariaDB database
+        <input id="set-mdb-db" placeholder="Hardware" style="max-width:10rem">
+      </label>
       <label class="grow">Telegram bot token
         <input id="set-token" type="password" placeholder="123:ABC…" class="grow">
       </label>

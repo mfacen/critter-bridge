@@ -61,6 +61,12 @@ function render() {
   if (document.activeElement !== $("set-interval")) $("set-interval").value = s.poll_interval || 15;
   if (document.activeElement !== $("set-beacon")) $("set-beacon").value = s.udp_beacon_port ?? 8421;
   if (document.activeElement !== $("set-auto")) $("set-auto").checked = s.auto_add !== false;
+  if (document.activeElement !== $("set-dbpath")) $("set-dbpath").value = s.local_db_path || "";
+  if (document.activeElement !== $("set-mdb-host")) $("set-mdb-host").value = s.mariadb_host || "localhost";
+  if (document.activeElement !== $("set-mdb-port")) $("set-mdb-port").value = s.mariadb_port || "3306";
+  if (document.activeElement !== $("set-mdb-user")) $("set-mdb-user").value = s.mariadb_user || "";
+  if (document.activeElement !== $("set-mdb-pass")) $("set-mdb-pass").value = s.mariadb_password || "";
+  if (document.activeElement !== $("set-mdb-db")) $("set-mdb-db").value = s.mariadb_database || "Hardware";
   if (document.activeElement !== $("set-token")) $("set-token").value = s.telegram_token || "";
   if (document.activeElement !== $("set-chat")) $("set-chat").value = s.telegram_chat_id || "";
   if (!document.querySelector("#board-list :focus")) renderBoards();
@@ -74,6 +80,8 @@ function render() {
 
 const BACKENDS = [
   { id: "", label: "— select backend —" },
+  { id: "local", label: "Local SQLite" },
+  { id: "mariadb", label: "MariaDB" },
   { id: "thingspeak", label: "ThingSpeak" },
   { id: "adafruit", label: "Adafruit IO" },
   { id: "influx", label: "InfluxDB Cloud" },
@@ -87,7 +95,7 @@ function panelOptions(panels) {
 
 function renderBoards() {
   const list = $("board-list");
-  const editSels = [".bname", ".bhost", ".bint", ".bb", ".tskey", ".ts-panel", ".ts-field", ".aio-user", ".aio-key", ".aio-panel", ".aio-feed", ".i-url", ".i-org", ".i-bk", ".i-token", ".i-meas", ".lb-host", ".lb-port", ".lb-db", ".lb-user", ".lb-pass", ".lb-table", ".lb-api-url", ".lb-api-key"];
+  const editSels = [".bname", ".bhost", ".bint", ".bb", ".tskey", ".ts-panel", ".ts-field", ".aio-user", ".aio-key", ".aio-panel", ".aio-feed", ".i-url", ".i-org", ".i-bk", ".i-token", ".i-meas", ".lb-api-url", ".lb-api-key", ".lb-table"];
   // Preserve unsaved edits across periodic refreshes (e.g. while pasting credentials).
   const drafts = {};
   for (const old of list.querySelectorAll(".card[data-id]")) {
@@ -96,13 +104,8 @@ function renderBoards() {
     for (const sel of editSels) {
       const el = old.querySelector(sel);
       if (!el) continue;
-      // Compare against the value the element had when rendered; if different, keep it.
-      const rendered = (el.defaultValue !== undefined && el.tagName === "INPUT" && el.type !== "checkbox") ? el.defaultValue : (el.dataset.rendered || "");
-      if (el.tagName === "SELECT") {
-        if (el.value !== (el.dataset.rendered || el.options[0]?.value || "")) { d[sel] = el.value; changed = true; }
-      } else if (el.value !== rendered) {
-        d[sel] = el.value; changed = true;
-      }
+      const rendered = el.dataset.rendered ?? "";
+      if (el.value !== rendered) { d[sel] = el.value; changed = true; }
     }
     if (changed) drafts[old.dataset.id] = d;
   }
@@ -206,23 +209,24 @@ function renderBoards() {
       </div>
       <div class="cfg cfg-layerbase">
         <div class="row">
-          <input class="lb-api-url" value="${esc(cfg.api_url || "")}" placeholder="HTTP API query URL (recommended, e.g. https://sage.cloud.layerbase.dev/v1/databases/<id>/query)" style="min-width:28rem">
+          <input class="lb-api-url" value="${esc(cfg.api_url || "")}" placeholder="Query URL: https://sage.cloud.layerbase.dev/v1/databases/<id>/query" style="min-width:28rem">
         </div>
         <div class="row">
           <input class="lb-api-key" type="password" value="${esc(cfg.api_key || "")}" placeholder="Bearer API key (sk_...)" style="min-width:22rem">
           <input class="lb-table" value="${esc(cfg.table || "panel_values")}" placeholder="table (default panel_values)" style="max-width:12rem">
         </div>
         <div class="row">
-          <span class="mut">HTTP mode (recommended): uses Layerbase query API via HTTPS. Table auto-created (device, panel, value, ts TEXT). Direct PostgreSQL fields below are optional fallback.</span>
+          <span class="mut">Layerbase HTTP query API (HTTPS). All numeric panels batched per poll; table auto-created (device, panel, value, ts).</span>
         </div>
+      </div>
+      <div class="cfg cfg-local">
         <div class="row">
-          <input class="lb-host" value="${esc(cfg.host || "")}" placeholder="Postgres host (fallback)" style="min-width:19rem">
-          <input class="lb-port" value="${esc(cfg.port || "5432")}" placeholder="port" style="max-width:6rem">
-          <input class="lb-db" value="${esc(cfg.dbname || "")}" placeholder="database" style="max-width:12rem">
+          <span class="mut">Local SQLite logging: board logger CSV uploads are stored in the configured SQLite DB (Settings → Local SQLite DB path), one wide table per logger file name (filename without extension, ts + panel columns). If no cloud backend is selected and the DB exists, uploads default to local storage.</span>
         </div>
+      </div>
+      <div class="cfg cfg-mariadb">
         <div class="row">
-          <input class="lb-user" value="${esc(cfg.user || "")}" placeholder="username" style="max-width:12rem">
-          <input class="lb-pass" type="password" value="${esc(cfg.password || "")}" placeholder="password" style="min-width:14rem">
+          <span class="mut">MariaDB logging: uses global MariaDB settings. Stores CSV uploads to table = logger filename (without extension), schema compatible with legacy fileUpload.php (Time INT PRIMARY KEY, panel columns added as FLOAT). If configured and no cloud backend is selected, uploads default to MariaDB.</span>
         </div>
       </div>`;
     card.querySelector(".bb").addEventListener("change", (e) => showCfg(card, e.target.value));
@@ -245,7 +249,7 @@ function renderBoards() {
 }
 
 function showCfg(card, backend) {
-  for (const b of ["thingspeak", "adafruit", "influx", "layerbase"]) {
+  for (const b of ["thingspeak", "adafruit", "influx", "layerbase", "local", "mariadb"]) {
     const el = card.querySelector(".cfg-" + b);
     if (el) el.classList.toggle("on", b === backend);
   }
@@ -275,12 +279,11 @@ async function onBoardAction(e) {
       } else if (backend === "layerbase") {
         cfg.api_url = card.querySelector(".lb-api-url").value;
         cfg.api_key = card.querySelector(".lb-api-key").value;
-        cfg.host = card.querySelector(".lb-host").value;
-        cfg.port = card.querySelector(".lb-port").value || "5432";
-        cfg.user = card.querySelector(".lb-user").value;
-        cfg.password = card.querySelector(".lb-pass").value;
-        cfg.dbname = card.querySelector(".lb-db").value;
         cfg.table = card.querySelector(".lb-table").value || "panel_values";
+      } else if (backend === "local") {
+        // no per-board config; uses global local_db_path
+      } else if (backend === "mariadb") {
+        // no per-board config; uses global MariaDB settings
       }
       await api("POST", "/api/boards/" + id, { backend, backend_cfg: cfg });
       toast(backend ? "Board saved (" + backend + ")" : "Board saved (no cloud backend)");
@@ -445,6 +448,12 @@ $("settings-form").addEventListener("submit", async (e) => {
       poll_interval: Number($("set-interval").value),
       udp_beacon_port: Number($("set-beacon").value || 0),
       auto_add: $("set-auto").checked,
+      local_db_path: $("set-dbpath").value,
+      mariadb_host: $("set-mdb-host").value,
+      mariadb_port: $("set-mdb-port").value,
+      mariadb_user: $("set-mdb-user").value,
+      mariadb_password: $("set-mdb-pass").value,
+      mariadb_database: $("set-mdb-db").value,
       telegram_token: $("set-token").value,
       telegram_chat_id: $("set-chat").value,
     });

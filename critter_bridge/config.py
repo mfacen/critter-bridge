@@ -16,6 +16,12 @@ DEFAULT_SETTINGS = {
     "listen_port": 8787,
     "telegram_token": "",     # Telegram bot token; chars sent from here, never from a board
     "telegram_chat_id": "",   # default chat for board-originated pushes and the test button
+    "local_db_path": "",      # SQLite DB for local logging; blank = BASE_DIR/critter.db
+    "mariadb_host": "localhost",
+    "mariadb_port": "3306",
+    "mariadb_user": "",
+    "mariadb_password": "",
+    "mariadb_database": "Hardware",
 }
 
 MIN_POLL_INTERVAL = 5       # floor for any poll interval, global or per board
